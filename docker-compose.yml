@@ -1,0 +1,51 @@
+# Local development stack. Ports bind to localhost only because the defaults below are not secrets.
+services:
+  api:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - qdrant
+      - langfuse
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  langfuse:
+    image: langfuse/langfuse:2
+    environment:
+      DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:-local-dev-only}@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-local-dev-only}
+      SALT: ${LANGFUSE_SALT:-local-dev-only}
+      TELEMETRY_ENABLED: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+
+  langfuse-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-local-dev-only}
+      POSTGRES_DB: langfuse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - langfuse-db-data:/var/lib/postgresql/data
+
+volumes:
+  qdrant-data:
+  langfuse-db-data:
