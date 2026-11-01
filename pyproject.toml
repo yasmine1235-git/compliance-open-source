@@ -12,6 +12,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "fastapi>=0.115,<1",
+    "langgraph>=1.2,<2",
     "pillow>=11,<14",
     "pydantic-settings>=2.5,<3",
     # 2.0 corrupts table text ("1.50%" becomes "1 50%") and misses tables; see test_parsers.py.
@@ -19,6 +20,7 @@ dependencies = [
     "pytesseract>=0.3.13,<1",
     "python-multipart>=0.0.18",
     "python-pptx>=1,<2",
+    "pyyaml>=6,<7",
     "qdrant-client>=1.15,<2",
     "uvicorn[standard]>=0.30,<1",
 ]
@@ -35,6 +37,7 @@ dev = [
     "mypy>=1.11,<2",
     "pytest>=8,<9",
     "ruff>=0.6,<1",
+    "types-pyyaml>=6,<7",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -67,5 +70,5 @@ ignore_missing_imports = true
 
 # pymupdf ships only partial type hints.
 [[tool.mypy.overrides]]
-module = ["complianceops.ingestion.pdf_parser", "test_parsers", "test_rag"]
+module = ["complianceops.ingestion.pdf_parser", "test_api", "test_parsers", "test_rag"]
 disallow_untyped_calls = false

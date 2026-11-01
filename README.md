@@ -3,8 +3,9 @@
 An open-source LLMOps platform for checking financial marketing documents against EU rules
 (MiFID II, SFDR, PRIIPs) and French AMF guidance. It uses only public documents and synthetic data.
 
-**Status: early skeleton.** The API accepts documents but does not run compliance checks yet.
-Every report has the status `not_evaluated` and no verdicts, which does not mean a document passed.
+**Status: in development.** Rule-based checks work, but no LLM is connected yet, so reports cannot
+be `compliant` and at best say `incomplete`. The rules are drafts that no compliance professional has
+reviewed, and the results are not legal advice.
 
 ## Quickstart
 
@@ -21,7 +22,7 @@ docker compose up --build
 Check a document:
 
 ```bash
-curl -F "file=@document.pdf" http://localhost:8000/check
+curl -F "file=@document.pdf" -F "target_country=FR" http://localhost:8000/check
 ```
 
 ## Ingestion and search
@@ -48,18 +49,53 @@ The first command downloads the embedding model, about 500 MB, into a Docker vol
 **Known limitation:** blocks are not split, and embedding models only read the start of a long
 text (128 tokens for MiniLM). The rest of a long block is stored but does not affect search.
 
+## Compliance checks
+
+Five agents run in parallel, and their verdicts are merged by deterministic code.
+
+| Agent | Method | Checks |
+|---|---|---|
+| `structure_agent` | Patterns | Risks alongside rewards, investment policy, cost and leverage explanations |
+| `disclaimer_agent` | Patterns | Marketing label, prospectus and KID reference, required statements |
+| `language_objectivity_agent` | Phrase list and LLM | Hyperbole and misleading language |
+| `content_coherence_agent` | RAG and LLM | Claims are consistent with the prospectus |
+| `sql_registration_agent` | SQLite | ISIN validity, registry entry, authorisation in the target country |
+
+The rules are in [`rules.yaml`](src/complianceops/agents/rules.yaml). Each one cites its source,
+mostly [ESMA's guidelines on marketing communications](https://www.esma.europa.eu/sites/default/files/library/esma34-45-1272_guidelines_on_marketing_communications.pdf).
+The fund registry contains fictional sample data.
+
+A report's `status` is one of these:
+
+| Status | Meaning |
+|---|---|
+| `compliant` | Every rule was evaluated and none failed |
+| `non_compliant` | At least one rule failed |
+| `incomplete` | Nothing failed, but at least one rule could not be evaluated |
+
+A rule is `not_evaluated` when its agent crashes, needs an LLM that is not configured, or lacks an
+input, so an unknown result can never look like a pass.
+
+**Known limitations:**
+
+- Pattern rules check that text is present, not that it is prominent, correctly placed or correctly
+  worded in the sense the guidelines require. A `pass` from them is not a legal assessment.
+- The French patterns are unofficial translations.
+- Rules only cover part of the guidelines. MiFID II, SFDR, PRIIPs and AMF texts are not covered yet.
+
 ## API
 
 - `GET /health` reports that the API is running.
-- `POST /check` takes a PDF or PPTX as the multipart field `file`, validates its type and content,
-  and returns a JSON report. The document is not stored.
+- `POST /check` takes a PDF or PPTX as the multipart field `file` and returns a JSON report. The
+  document is not stored. Optional form fields: `target_country` (such as `FR`), `prospectus_id`
+  and `prospectus_version`.
 
 | Response | Meaning |
 |---|---|
 | `400` | The file is empty |
 | `413` | The file exceeds `COMPLIANCEOPS_MAX_UPLOAD_BYTES` (default 50 MB) |
 | `415` | The file is not a valid PDF or PPTX |
-| `422` | The request has no `file` field |
+| `422` | The request has no `file` field, a field is invalid, or the file cannot be read |
 
 ## Development
 

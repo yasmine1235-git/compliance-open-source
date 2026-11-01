@@ -1,8 +1,15 @@
-"""Response models for the HTTP API."""
+"""Models for the HTTP API."""
 
 from enum import StrEnum
 
 from pydantic import BaseModel
+
+from complianceops.agents.models import ReportStatus, Verdict
+
+REPORT_DISCLAIMER = (
+    "Automated check against draft rules that have not been reviewed by a compliance "
+    "professional. Not legal advice."
+)
 
 
 class FileType(StrEnum):
@@ -12,33 +19,11 @@ class FileType(StrEnum):
     PPTX = "pptx"
 
 
-class ReportStatus(StrEnum):
-    """Overall state of a report.
-
-    ``NOT_EVALUATED`` means no compliance rule was run, and must never be read as a pass.
-    """
-
-    NOT_EVALUATED = "not_evaluated"
-
-
 class HealthResponse(BaseModel):
     """Response of ``GET /health``."""
 
     status: str
     version: str
-
-
-class Verdict(BaseModel):
-    """Outcome of one rule, with the evidence that supports it."""
-
-    rule_id: str
-    status: str
-    evidence_text: str
-    source_doc: str
-    page: int
-    chunk_id: str
-    agent: str
-    latency_ms: float
 
 
 class CheckReport(BaseModel):
@@ -50,3 +35,4 @@ class CheckReport(BaseModel):
     sha256: str
     status: ReportStatus
     verdicts: list[Verdict]
+    disclaimer: str = REPORT_DISCLAIMER
