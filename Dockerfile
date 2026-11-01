@@ -1,11 +1,18 @@
 FROM python:3.11-slim
 
-WORKDIR /app
-COPY pyproject.toml README.md ./
-COPY src ./src
-RUN pip install --no-cache-dir .
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home app
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+WORKDIR /app
+COPY pyproject.toml README.md LICENSE ./
+COPY src ./src
+RUN pip install --no-cache-dir ".[embeddings]"
+
+RUN useradd --create-home app && install -d -o app -g app /home/app/.cache/huggingface
+ENV HF_HOME=/home/app/.cache/huggingface
 USER app
 
 EXPOSE 8000

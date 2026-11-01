@@ -7,15 +7,29 @@ name = "complianceops"
 version = "0.1.0"
 description = "Open-source LLMOps platform for financial document compliance"
 readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "fastapi>=0.115,<1",
+    "pillow>=11,<14",
     "pydantic-settings>=2.5,<3",
+    # 2.0 corrupts table text ("1.50%" becomes "1 50%") and misses tables; see test_parsers.py.
+    "pymupdf>=1.27.2,<1.28",
+    "pytesseract>=0.3.13,<1",
     "python-multipart>=0.0.18",
+    "python-pptx>=1,<2",
+    "qdrant-client>=1.15,<2",
     "uvicorn[standard]>=0.30,<1",
 ]
 
+[project.scripts]
+complianceops = "complianceops.cli:main"
+
 [project.optional-dependencies]
+embeddings = [
+    "sentence-transformers>=5.7,<6",
+]
 dev = [
     "httpx>=0.27,<1",
     "mypy>=1.11,<2",
@@ -45,3 +59,13 @@ select = ["E", "F", "I", "B", "UP", "S"]
 python_version = "3.11"
 strict = true
 files = ["src", "tests"]
+mypy_path = ["tests"]
+
+[[tool.mypy.overrides]]
+module = ["pymupdf", "pptx.*", "pytesseract", "sentence_transformers"]
+ignore_missing_imports = true
+
+# pymupdf ships only partial type hints.
+[[tool.mypy.overrides]]
+module = ["complianceops.ingestion.pdf_parser", "test_parsers", "test_rag"]
+disallow_untyped_calls = false

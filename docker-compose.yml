@@ -5,21 +5,26 @@ services:
     env_file:
       - path: .env
         required: false
+    environment:
+      COMPLIANCEOPS_QDRANT_URL: http://qdrant:6333
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/app/data:ro
+      - model-cache:/home/app/.cache/huggingface
     depends_on:
       - qdrant
       - langfuse
 
   qdrant:
-    image: qdrant/qdrant:v1.12.4
+    image: qdrant/qdrant:v1.20.0
     ports:
       - "127.0.0.1:6333:6333"
     volumes:
       - qdrant-data:/qdrant/storage
 
   langfuse:
-    image: langfuse/langfuse:2
+    image: langfuse/langfuse:2.95.11
     environment:
       DATABASE_URL: postgresql://langfuse:${LANGFUSE_DB_PASSWORD:-local-dev-only}@langfuse-db:5432/langfuse
       NEXTAUTH_URL: http://localhost:3000
@@ -47,5 +52,6 @@ services:
       - langfuse-db-data:/var/lib/postgresql/data
 
 volumes:
+  model-cache:
   qdrant-data:
   langfuse-db-data:
